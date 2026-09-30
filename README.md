@@ -86,4 +86,4 @@ Inspired by the original [2048](https://github.com/gabrielecirulli/2048) by Gabr
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/).
+[MIT]([https://choosealicense.com/licenses/mit/](https://github.com/hosseinb1111/Implement-2048/blob/main/LICENSE)).
