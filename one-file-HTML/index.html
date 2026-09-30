@@ -1,0 +1,3176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  >
+
+  <meta name="theme-color" content="#faf8ef" id="theme-color">
+  <meta name="color-scheme" content="light dark">
+
+  <title>2048</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+    rel="stylesheet"
+  >
+
+  <style>
+    /* =========================================================
+       THEME VARIABLES
+       ========================================================= */
+
+    :root {
+      --bg-1: #faf8ef;
+      --bg-2: #f0ead6;
+
+      --grid: #bbada0;
+      --cell: #cdc1b4;
+
+      --text: #776e65;
+      --text-light: #f9f6f2;
+
+      --btn-bg: #8f7a66;
+      --btn-hover: #7f6a56;
+      --btn-text: #ffffff;
+
+      --credit: #a39680;
+
+      --icon-bg: rgba(255, 255, 255, 0.7);
+      --icon-color: #776e65;
+
+      --icon-hover-bg: #8f7a66;
+      --icon-hover-color: #ffffff;
+
+      --selection-bg: #edc22e;
+      --selection-color: #776e65;
+
+      --board: 400px;
+      --pad: 15px;
+      --gap: 15px;
+      --radius: 8px;
+
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+    }
+
+    body.dark {
+      --bg-1: #1a1814;
+      --bg-2: #0f0e0b;
+
+      --grid: #3a342c;
+      --cell: #2a251f;
+
+      --text: #e8ddc9;
+      --text-light: #f9f6f2;
+
+      --btn-bg: #4a4238;
+      --btn-hover: #5a5248;
+      --btn-text: #f0ead6;
+
+      --credit: #8a7f6a;
+
+      --icon-bg: rgba(255, 255, 255, 0.08);
+      --icon-color: #e8ddc9;
+
+      --icon-hover-bg: #4a4238;
+      --icon-hover-color: #f0ead6;
+    }
+
+    /* =========================================================
+       RESET
+       ========================================================= */
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg-2);
+      overflow-x: hidden;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+
+      padding:
+        calc(20px + var(--safe-top))
+        calc(16px + var(--safe-right))
+        calc(20px + var(--safe-bottom))
+        calc(16px + var(--safe-left));
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      background:
+        radial-gradient(
+          circle at 50% 0%,
+          var(--bg-1) 0%,
+          var(--bg-2) 100%
+        );
+
+      color: var(--text);
+      font-family: "Press Start 2P", cursive;
+
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+
+      touch-action: manipulation;
+
+      user-select: none;
+      -webkit-user-select: none;
+
+      transition:
+        background 0.5s ease,
+        color 0.5s ease;
+
+      overflow-x: hidden;
+    }
+
+    ::selection {
+      background: var(--selection-bg);
+      color: var(--selection-color);
+    }
+
+    ::-moz-selection {
+      background: var(--selection-bg);
+      color: var(--selection-color);
+    }
+
+    button {
+      font: inherit;
+      border: 0;
+      background: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: 3px solid var(--selection-bg);
+      outline-offset: 3px;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* =========================================================
+       CUSTOM CURSOR
+       ========================================================= */
+
+    .cursor-dot,
+    .cursor-ring {
+      display: none;
+
+      position: fixed;
+      top: 0;
+      left: 0;
+
+      pointer-events: none;
+      z-index: 9999;
+
+      transform: translate(-50%, -50%);
+    }
+
+    .cursor-dot {
+      width: 8px;
+      height: 8px;
+
+      background: var(--btn-bg);
+      border-radius: 50%;
+
+      transition:
+        width 0.2s ease,
+        height 0.2s ease,
+        background 0.3s ease;
+    }
+
+    .cursor-ring {
+      width: 34px;
+      height: 34px;
+
+      border: 2px solid var(--btn-bg);
+      border-radius: 50%;
+
+      z-index: 9998;
+      opacity: 0.55;
+
+      transition:
+        width 0.2s ease,
+        height 0.2s ease,
+        background 0.3s ease,
+        border-color 0.3s ease;
+    }
+
+    body.cursor-hover .cursor-ring {
+      width: 52px;
+      height: 52px;
+      background: rgba(143, 122, 102, 0.12);
+    }
+
+    body.cursor-hover .cursor-dot {
+      width: 12px;
+      height: 12px;
+    }
+
+    @media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+      body,
+      button,
+      a {
+        cursor: none;
+      }
+
+      .cursor-dot,
+      .cursor-ring {
+        display: block;
+      }
+    }
+
+    /* =========================================================
+       THEME BUTTON
+       ========================================================= */
+
+    .theme-btn {
+      position: fixed;
+
+      top: calc(16px + var(--safe-top));
+      right: calc(16px + var(--safe-right));
+
+      width: 46px;
+      height: 46px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background: var(--icon-bg);
+      color: var(--icon-color);
+
+      border-radius: 50%;
+
+      font-size: 1.1rem;
+      line-height: 1;
+
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+
+      box-shadow:
+        0 4px 14px rgba(0, 0, 0, 0.08);
+
+      z-index: 50;
+
+      transition:
+        transform 0.25s ease,
+        background 0.25s ease,
+        color 0.25s ease;
+    }
+
+    .theme-btn:hover {
+      transform: scale(1.1) rotate(-12deg);
+      background: var(--icon-hover-bg);
+      color: var(--icon-hover-color);
+    }
+
+    .theme-btn:active {
+      transform: scale(0.94);
+    }
+
+    /* =========================================================
+       APP
+       ========================================================= */
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      width: 100%;
+      max-width: 520px;
+
+      gap: clamp(14px, 3vw, 22px);
+    }
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      width: 100%;
+
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .title {
+      font-size: clamp(1.6rem, 6vw, 2.4rem);
+
+      color: var(--text);
+
+      letter-spacing: 0.02em;
+      line-height: 1.1;
+    }
+
+    .scores {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .score-box {
+      position: relative;
+
+      background: var(--grid);
+      color: var(--text-light);
+
+      padding: 10px 14px;
+      border-radius: 8px;
+
+      min-width: 84px;
+
+      text-align: center;
+
+      box-shadow:
+        inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .score-label {
+      display: block;
+
+      font-size: 0.55rem;
+      letter-spacing: 0.06em;
+
+      margin-bottom: 6px;
+
+      opacity: 0.85;
+    }
+
+    .score-value {
+      display: block;
+
+      font-size: 1rem;
+      line-height: 1;
+
+      transition: transform 0.2s ease;
+    }
+
+    .score-value.bump {
+      animation: score-bump 0.28s ease;
+    }
+
+    @keyframes score-bump {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.22);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* =========================================================
+       SCORE FLOAT
+       ========================================================= */
+
+    .score-float {
+      position: absolute;
+
+      left: 50%;
+      top: 8px;
+
+      transform: translateX(-50%);
+
+      font-size: 0.7rem;
+
+      color: var(--text-light);
+
+      font-weight: bold;
+
+      pointer-events: none;
+      white-space: nowrap;
+
+      animation: score-float 0.7s ease-out forwards;
+    }
+
+    @keyframes score-float {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, 0);
+      }
+
+      20% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -22px);
+      }
+    }
+
+    /* =========================================================
+       BOARD
+       ========================================================= */
+
+    .board {
+      position: relative;
+
+      width: var(--board);
+      height: var(--board);
+
+      padding: var(--pad);
+
+      background: var(--grid);
+
+      border-radius: 12px;
+
+      display: grid;
+
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+
+      gap: var(--gap);
+
+      touch-action: none;
+
+      box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.12),
+        inset 0 -3px 0 rgba(0, 0, 0, 0.06);
+
+      transition:
+        background 0.5s ease,
+        box-shadow 0.5s ease;
+
+      overflow: hidden;
+    }
+
+    .cell {
+      background: var(--cell);
+
+      border-radius: 8px;
+
+      transition:
+        background 0.5s ease;
+    }
+
+    /* =========================================================
+       TILE LAYER
+       ========================================================= */
+
+    .tiles {
+      position: absolute;
+
+      inset: 0;
+
+      pointer-events: none;
+
+      border-radius: 12px;
+
+      overflow: hidden;
+    }
+
+    .tile {
+      position: absolute;
+
+      top: 0;
+      left: 0;
+
+      width: 0;
+      height: 0;
+
+      transition:
+        transform 120ms ease-in-out;
+
+      will-change: transform;
+    }
+
+    .tile-inner {
+      width: 100%;
+      height: 100%;
+
+      display: flex;
+
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 8px;
+
+      line-height: 1;
+      letter-spacing: -0.02em;
+
+      font-size: var(--tile-font-size, 24px);
+
+      box-shadow:
+        0 2px 0 rgba(0, 0, 0, 0.08);
+
+      backface-visibility: hidden;
+
+      transition:
+        background 0.5s ease,
+        color 0.5s ease;
+    }
+
+    /* =========================================================
+       TILE COLORS
+       ========================================================= */
+
+    .tile-2 .tile-inner {
+      background: #eee4da;
+      color: #776e65;
+    }
+
+    .tile-4 .tile-inner {
+      background: #ede0c8;
+      color: #776e65;
+    }
+
+    .tile-8 .tile-inner {
+      background: #f2b179;
+      color: #f9f6f2;
+    }
+
+    .tile-16 .tile-inner {
+      background: #f59563;
+      color: #f9f6f2;
+    }
+
+    .tile-32 .tile-inner {
+      background: #f67c5f;
+      color: #f9f6f2;
+    }
+
+    .tile-64 .tile-inner {
+      background: #f65e3b;
+      color: #f9f6f2;
+    }
+
+    .tile-128 .tile-inner {
+      background: #edcf72;
+      color: #f9f6f2;
+    }
+
+    .tile-256 .tile-inner {
+      background: #edcc61;
+      color: #f9f6f2;
+    }
+
+    .tile-512 .tile-inner {
+      background: #edc850;
+      color: #f9f6f2;
+    }
+
+    .tile-1024 .tile-inner {
+      background: #edc53f;
+      color: #f9f6f2;
+    }
+
+    .tile-2048 .tile-inner {
+      background: #edc22e;
+      color: #f9f6f2;
+
+      box-shadow:
+        0 0 24px rgba(237, 194, 46, 0.6),
+        0 0 48px rgba(237, 194, 46, 0.3);
+    }
+
+    .tile-4096 .tile-inner {
+      background: #3c3a32;
+      color: #f9f6f2;
+    }
+
+    .tile-8192 .tile-inner {
+      background: #1e1c18;
+      color: #f9f6f2;
+    }
+
+    /* =========================================================
+       TILE ANIMATIONS
+       ========================================================= */
+
+    .tile-new .tile-inner {
+      animation: tile-appear 180ms ease-out;
+    }
+
+    @keyframes tile-appear {
+      from {
+        opacity: 0;
+        transform: scale(0.4);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .tile-merged .tile-inner {
+      animation: tile-pop 220ms ease-out;
+    }
+
+    @keyframes tile-pop {
+      0% {
+        transform: scale(1);
+      }
+
+      45% {
+        transform: scale(1.18);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* =========================================================
+       MESSAGE OVERLAY
+       ========================================================= */
+
+    .message {
+      position: absolute;
+
+      inset: 0;
+
+      display: flex;
+
+      flex-direction: column;
+
+      align-items: center;
+      justify-content: center;
+
+      gap: 20px;
+
+      background: rgba(238, 228, 218, 0.82);
+
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+
+      border-radius: 12px;
+
+      z-index: 30;
+
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+
+      transition:
+        opacity 0.3s ease,
+        visibility 0.3s ease;
+    }
+
+    body.dark .message {
+      background: rgba(26, 24, 20, 0.85);
+    }
+
+    .message.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .message-text {
+      font-size: clamp(1.1rem, 4vw, 1.4rem);
+
+      color: var(--text);
+
+      text-align: center;
+
+      padding: 0 12px;
+
+      line-height: 1.4;
+    }
+
+    .message-buttons {
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap: 8px;
+
+      justify-content: center;
+
+      padding: 0 12px;
+    }
+
+    /* =========================================================
+       BUTTONS
+       ========================================================= */
+
+    .btn {
+      background: var(--btn-bg);
+      color: var(--btn-text);
+
+      padding: 12px 20px;
+
+      border-radius: 8px;
+
+      font-size: 0.7rem;
+      line-height: 1;
+
+      letter-spacing: 0.02em;
+
+      transition:
+        background 0.2s ease,
+        transform 0.15s ease,
+        box-shadow 0.2s ease;
+    }
+
+    .btn:hover {
+      background: var(--btn-hover);
+
+      transform: translateY(-2px);
+
+      box-shadow:
+        0 6px 14px rgba(0, 0, 0, 0.14);
+    }
+
+    .btn:active {
+      transform: translateY(0) scale(0.97);
+    }
+
+    .btn.secondary {
+      background: transparent;
+
+      color: var(--text);
+
+      box-shadow:
+        inset 0 0 0 2px var(--grid);
+    }
+
+    .btn.secondary:hover {
+      background: var(--grid);
+
+      color: var(--text-light);
+
+      box-shadow:
+        inset 0 0 0 2px var(--grid);
+    }
+
+    .controls {
+      display: flex;
+
+      gap: 10px;
+
+      align-items: center;
+      justify-content: center;
+
+      flex-wrap: wrap;
+
+      margin-top: 2px;
+    }
+
+    /* =========================================================
+       HINT
+       ========================================================= */
+
+    .hint {
+      color: var(--credit);
+
+      font-size: 0.55rem;
+
+      letter-spacing: 0.08em;
+
+      text-transform: uppercase;
+
+      text-align: center;
+
+      opacity: 0.85;
+    }
+
+    /* =========================================================
+       CREDIT
+       ========================================================= */
+
+    .credit {
+      display: inline-flex;
+
+      flex-wrap: wrap;
+
+      align-items: center;
+      justify-content: center;
+
+      gap: 6px;
+
+      margin-top: clamp(4px, 2vw, 10px);
+
+      color: var(--credit);
+
+      font-size: 0.5rem;
+
+      letter-spacing: 0.02em;
+
+      line-height: 1.6;
+
+      text-align: center;
+
+      opacity: 0.9;
+    }
+
+    .heart,
+    .coffee {
+      display: inline-block;
+
+      font-size: 1em;
+
+      line-height: 1;
+
+      transform-origin: center;
+    }
+
+    .heart {
+      animation: heart-beat 1.8s ease-in-out infinite;
+    }
+
+    .coffee {
+      animation: coffee-bob 2.6s ease-in-out infinite;
+    }
+
+    @keyframes heart-beat {
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      15% {
+        transform: scale(1.25);
+      }
+
+      30% {
+        transform: scale(1);
+      }
+
+      45% {
+        transform: scale(1.15);
+      }
+    }
+
+    @keyframes coffee-bob {
+      0%,
+      100% {
+        transform: translateY(0) rotate(0deg);
+      }
+
+      40% {
+        transform: translateY(-2px) rotate(-6deg);
+      }
+
+      70% {
+        transform: translateY(0) rotate(3deg);
+      }
+    }
+
+    .credit-name {
+      color: var(--text);
+
+      font-weight: bold;
+
+      opacity: 0.85;
+    }
+
+    /* =========================================================
+       GITHUB LINK
+       ========================================================= */
+
+    .github-link {
+      display: inline-flex;
+
+      align-items: center;
+      justify-content: center;
+
+      width: 26px;
+      height: 26px;
+
+      margin-left: 2px;
+
+      color: var(--icon-color);
+
+      background: var(--icon-bg);
+
+      border-radius: 50%;
+
+      text-decoration: none;
+
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.08);
+
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+
+      transition:
+        transform 0.25s ease,
+        background 0.25s ease,
+        color 0.25s ease;
+    }
+
+    .github-link:hover {
+      transform: scale(1.15) rotate(-6deg);
+
+      background: var(--icon-hover-bg);
+      color: var(--icon-hover-color);
+    }
+
+    .github-link:active {
+      transform: scale(0.94);
+    }
+
+    .github-link svg {
+      display: block;
+
+      width: 14px;
+      height: 14px;
+
+      fill: currentColor;
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @media (max-width: 500px) {
+      :root {
+        --board: 340px;
+        --pad: 12px;
+        --gap: 12px;
+      }
+
+      .score-box {
+        min-width: 72px;
+        padding: 8px 10px;
+      }
+
+      .score-value {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      :root {
+        --board: 300px;
+        --pad: 10px;
+        --gap: 10px;
+      }
+
+      .title {
+        font-size: 1.4rem;
+      }
+
+      .score-label {
+        font-size: 0.5rem;
+      }
+
+      .score-value {
+        font-size: 0.85rem;
+      }
+
+      .btn {
+        font-size: 0.6rem;
+        padding: 10px 14px;
+      }
+
+      .credit {
+        font-size: 0.45rem;
+      }
+    }
+
+    @media (max-width: 340px) {
+      :root {
+        --board: 260px;
+        --pad: 8px;
+        --gap: 8px;
+      }
+
+      .credit {
+        font-size: 0.42rem;
+        gap: 4px;
+      }
+
+      .github-link {
+        width: 22px;
+        height: 22px;
+      }
+
+      .github-link svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+
+    /* Short viewports */
+
+    @media (max-height: 700px) and (min-width: 500px) {
+      :root {
+        --board: 340px;
+        --pad: 12px;
+        --gap: 12px;
+      }
+    }
+
+    @media (max-height: 600px) {
+      :root {
+        --board: 280px;
+        --pad: 10px;
+        --gap: 10px;
+      }
+
+      .hint,
+      .credit {
+        font-size: 0.42rem;
+      }
+    }
+
+    /* =========================================================
+       REDUCED MOTION
+       ========================================================= */
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+
+      .heart,
+      .coffee {
+        animation: none;
+      }
+
+      .tile {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- CUSTOM CURSOR -->
+  <div
+    class="cursor-dot"
+    id="cursor-dot"
+    aria-hidden="true"
+  ></div>
+
+  <div
+    class="cursor-ring"
+    id="cursor-ring"
+    aria-hidden="true"
+  ></div>
+
+  <!-- THEME TOGGLE -->
+  <button
+    type="button"
+    class="theme-btn interactive"
+    id="theme-btn"
+    aria-label="Switch to dark theme"
+    title="Switch to dark theme"
+  >
+    🌙
+  </button>
+
+  <main class="app">
+
+    <!-- HEADER -->
+    <header class="header">
+
+      <h1 class="title">2048</h1>
+
+      <div class="scores">
+
+        <div
+          class="score-box"
+          id="score-box"
+        >
+          <span class="score-label">SCORE</span>
+
+          <span
+            class="score-value"
+            id="score"
+          >
+            0
+          </span>
+        </div>
+
+        <div class="score-box">
+
+          <span class="score-label">BEST</span>
+
+          <span
+            class="score-value"
+            id="best"
+          >
+            0
+          </span>
+
+        </div>
+
+      </div>
+
+    </header>
+
+    <!-- BOARD -->
+    <div
+      class="board"
+      id="board"
+      role="application"
+      aria-label="2048 game board"
+      aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight W A S D"
+    >
+
+      <!-- GRID CELLS -->
+      <div class="cell"></div>
+      <div class="cell"></div>
+      <div class="cell"></div>
+      <div class="cell"></div>
+
+      <div class="cell"></div>
+      <div class="cell"></div>
+      <div class="cell"></div>
+      <div class="cell"></div>
+
+      <div class="cell"></div>
+      <div class="cell"></div>
+      <div class="cell"></div>
+      <div class="cell"></div>
+
+      <div class="cell"></div>
+      <div class="cell"></div>
+      <div class="cell"></div>
+      <div class="cell"></div>
+
+      <!-- TILE LAYER -->
+      <div
+        class="tiles"
+        id="tiles"
+        aria-hidden="true"
+      ></div>
+
+      <!-- MESSAGE -->
+      <div
+        class="message"
+        id="message"
+        aria-live="polite"
+      >
+
+        <p
+          class="message-text"
+          id="message-text"
+        >
+          Game Over!
+        </p>
+
+        <div class="message-buttons">
+
+          <button
+            type="button"
+            class="btn"
+            id="message-btn"
+          >
+            Try Again
+          </button>
+
+          <button
+            type="button"
+            class="btn secondary"
+            id="continue-btn"
+            hidden
+          >
+            Keep Going
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+
+      <button
+        type="button"
+        class="btn interactive"
+        id="new-game"
+      >
+        New Game
+      </button>
+
+      <button
+        type="button"
+        class="btn secondary interactive"
+        id="undo"
+        disabled
+      >
+        Undo
+      </button>
+
+    </div>
+
+    <!-- HINT -->
+    <p class="hint">
+      Swipe or use Arrow Keys / WASD
+    </p>
+
+    <!-- CREDIT -->
+    <p class="credit">
+
+      <span>Created with</span>
+
+      <span
+        class="heart"
+        role="img"
+        aria-label="love"
+      >
+        ❤️
+      </span>
+
+      <span>&amp;</span>
+
+      <span
+        class="coffee"
+        role="img"
+        aria-label="coffee"
+      >
+        ☕
+      </span>
+
+      <span>by</span>
+
+      <span class="credit-name">
+        Hossein Seyed Bagheri
+      </span>
+
+      <a
+        class="github-link interactive"
+        href="https://github.com/hosseinb1111/Random-Adventure-Generator"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="View project on GitHub"
+        title="View on GitHub"
+      >
+
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+          />
+        </svg>
+
+      </a>
+
+    </p>
+
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      /* =========================================================
+         CONFIG
+         ========================================================= */
+
+      const SIZE = 4;
+
+      const STORAGE_BEST = "game2048-best";
+      const STORAGE_THEME = "game2048-theme";
+
+      const SLIDE_MS = 120;
+
+      const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+
+      /* =========================================================
+         DOM
+         ========================================================= */
+
+      const tilesLayer = document.getElementById("tiles");
+      const boardEl = document.getElementById("board");
+
+      const scoreEl = document.getElementById("score");
+      const bestEl = document.getElementById("best");
+
+      const scoreBoxEl = document.getElementById("score-box");
+
+      const messageEl = document.getElementById("message");
+      const messageText = document.getElementById("message-text");
+
+      const messageBtn = document.getElementById("message-btn");
+      const continueBtn = document.getElementById("continue-btn");
+
+      const newGameBtn = document.getElementById("new-game");
+      const undoBtn = document.getElementById("undo");
+
+      const themeBtn = document.getElementById("theme-btn");
+      const themeColorMeta = document.getElementById("theme-color");
+
+      const cursorDot = document.getElementById("cursor-dot");
+      const cursorRing = document.getElementById("cursor-ring");
+
+      /* =========================================================
+         STATE
+         ========================================================= */
+
+      let tiles = [];
+
+      let nextId = 1;
+
+      let score = 0;
+      let bestScore = 0;
+
+      let gameOver = false;
+      let won = false;
+      let keepPlaying = false;
+
+      let previousState = null;
+
+      let isAnimating = false;
+
+      const tileEls = new Map();
+
+      /* =========================================================
+         STORAGE
+         ========================================================= */
+
+      function loadBest() {
+        try {
+          const raw = localStorage.getItem(STORAGE_BEST);
+
+          const value = Number.parseInt(
+            raw ?? "0",
+            10
+          );
+
+          if (
+            Number.isFinite(value) &&
+            value >= 0
+          ) {
+            bestScore = value;
+          }
+
+        } catch (_) {
+          // Ignore storage errors.
+        }
+
+        bestEl.textContent = bestScore.toLocaleString();
+      }
+
+      function saveBest() {
+        try {
+          localStorage.setItem(
+            STORAGE_BEST,
+            String(bestScore)
+          );
+        } catch (_) {
+          // Ignore storage errors.
+        }
+      }
+
+      function loadTheme() {
+        let dark = false;
+
+        try {
+          dark =
+            localStorage.getItem(STORAGE_THEME) === "dark";
+        } catch (_) {
+          // Ignore storage errors.
+        }
+
+        applyTheme(dark);
+      }
+
+      function saveTheme(isDark) {
+        try {
+          localStorage.setItem(
+            STORAGE_THEME,
+            isDark ? "dark" : "light"
+          );
+        } catch (_) {
+          // Ignore storage errors.
+        }
+      }
+
+      function applyTheme(isDark) {
+        document.body.classList.toggle(
+          "dark",
+          isDark
+        );
+
+        themeBtn.textContent = isDark
+          ? "☀️"
+          : "🌙";
+
+        themeBtn.setAttribute(
+          "aria-label",
+          isDark
+            ? "Switch to light theme"
+            : "Switch to dark theme"
+        );
+
+        themeBtn.setAttribute(
+          "title",
+          isDark
+            ? "Switch to light theme"
+            : "Switch to dark theme"
+        );
+
+        if (themeColorMeta) {
+          themeColorMeta.content = isDark
+            ? "#0f0e0b"
+            : "#faf8ef";
+        }
+      }
+
+      /* =========================================================
+         HELPERS
+         ========================================================= */
+
+      function tileAt(row, col) {
+        return (
+          tiles.find(
+            tile =>
+              tile.row === row &&
+              tile.col === col
+          ) || null
+        );
+      }
+
+      function tileById(id) {
+        return (
+          tiles.find(
+            tile => tile.id === id
+          ) || null
+        );
+      }
+
+      /*
+        IMPORTANT:
+        Snapshot is created BEFORE a move mutates the board.
+        This is the main Undo bug fixed from the original code.
+      */
+
+      function snapshot() {
+        return {
+          tiles: tiles.map(tile => ({
+            id: tile.id,
+            value: tile.value,
+            row: tile.row,
+            col: tile.col,
+            isNew: false
+          })),
+
+          score,
+          nextId,
+
+          gameOver,
+          won,
+          keepPlaying
+        };
+      }
+
+      /* =========================================================
+         RANDOM TILE
+         ========================================================= */
+
+      function addRandomTile() {
+        const empty = [];
+
+        for (let row = 0; row < SIZE; row++) {
+          for (let col = 0; col < SIZE; col++) {
+            if (!tileAt(row, col)) {
+              empty.push({ row, col });
+            }
+          }
+        }
+
+        if (!empty.length) {
+          return null;
+        }
+
+        const spot =
+          empty[
+            Math.floor(
+              Math.random() * empty.length
+            )
+          ];
+
+        const tile = {
+          id: nextId++,
+
+          value:
+            Math.random() < 0.9
+              ? 2
+              : 4,
+
+          row: spot.row,
+          col: spot.col,
+
+          isNew: true
+        };
+
+        tiles.push(tile);
+
+        return tile;
+      }
+
+      /* =========================================================
+         TILE GEOMETRY
+         ========================================================= */
+
+      function getBoardGeometry() {
+        const styles =
+          getComputedStyle(boardEl);
+
+        const pad =
+          Number.parseFloat(
+            styles.paddingLeft
+          ) || 0;
+
+        const gap =
+          Number.parseFloat(
+            styles.columnGap
+          ) || 0;
+
+        const cellSize =
+          (
+            boardEl.clientWidth -
+            pad * 2 -
+            gap * (SIZE - 1)
+          ) / SIZE;
+
+        return {
+          pad,
+          gap,
+          cellSize
+        };
+      }
+
+      function syncTileGeometry() {
+        const {
+          pad,
+          gap,
+          cellSize
+        } = getBoardGeometry();
+
+        for (const tile of tiles) {
+          const el = tileEls.get(
+            tile.id
+          );
+
+          if (!el) {
+            continue;
+          }
+
+          let fontScale = 0.34;
+
+          if (tile.value >= 10000) {
+            fontScale = 0.17;
+          } else if (tile.value >= 1000) {
+            fontScale = 0.20;
+          } else if (tile.value >= 100) {
+            fontScale = 0.26;
+          }
+
+          el.style.width =
+            `${cellSize}px`;
+
+          el.style.height =
+            `${cellSize}px`;
+
+          el.style.setProperty(
+            "--tile-font-size",
+            `${Math.max(
+              14,
+              cellSize * fontScale
+            )}px`
+          );
+
+          const x =
+            pad +
+            tile.col *
+              (cellSize + gap);
+
+          const y =
+            pad +
+            tile.row *
+              (cellSize + gap);
+
+          el.style.transform =
+            `translate(${x}px, ${y}px)`;
+        }
+      }
+
+      /* =========================================================
+         TILE DOM
+         ========================================================= */
+
+      function createTileEl(tile) {
+        const el =
+          document.createElement(
+            "div"
+          );
+
+        el.className =
+          `tile tile-${Math.min(
+            tile.value,
+            8192
+          )}`;
+
+        el.dataset.value =
+          String(tile.value);
+
+        el.dataset.id =
+          String(tile.id);
+
+        const inner =
+          document.createElement(
+            "div"
+          );
+
+        inner.className =
+          "tile-inner";
+
+        inner.textContent =
+          tile.value;
+
+        el.appendChild(inner);
+
+        if (
+          tile.isNew &&
+          !reducedMotion
+        ) {
+          el.classList.add(
+            "tile-new"
+          );
+        }
+
+        return el;
+      }
+
+      function updateTileEl(
+        el,
+        tile
+      ) {
+        if (
+          el.dataset.value !==
+          String(tile.value)
+        ) {
+          el.dataset.value =
+            String(tile.value);
+
+          el.className =
+            `tile tile-${Math.min(
+              tile.value,
+              8192
+            )}`;
+
+          const inner =
+            el.firstElementChild;
+
+          if (inner) {
+            inner.textContent =
+              tile.value;
+          }
+        }
+      }
+
+      function renderTiles() {
+        const currentIds =
+          new Set(
+            tiles.map(
+              tile => tile.id
+            )
+          );
+
+        /* Remove orphan DOM tiles */
+
+        for (
+          const [id, el]
+          of tileEls
+        ) {
+          if (
+            !currentIds.has(id)
+          ) {
+            el.remove();
+            tileEls.delete(id);
+          }
+        }
+
+        /* Create/update tiles */
+
+        for (const tile of tiles) {
+          let el =
+            tileEls.get(
+              tile.id
+            );
+
+          if (!el) {
+            el =
+              createTileEl(tile);
+
+            tileEls.set(
+              tile.id,
+              el
+            );
+
+            tilesLayer.appendChild(
+              el
+            );
+          } else {
+            updateTileEl(
+              el,
+              tile
+            );
+          }
+        }
+
+        syncTileGeometry();
+      }
+
+      /* =========================================================
+         SCORE
+         ========================================================= */
+
+      function setScore(
+        newScore,
+        animate = true
+      ) {
+        score =
+          Math.max(
+            0,
+            newScore
+          );
+
+        scoreEl.textContent =
+          score.toLocaleString();
+
+        if (
+          animate &&
+          !reducedMotion
+        ) {
+          scoreEl.classList.remove(
+            "bump"
+          );
+
+          void scoreEl.offsetWidth;
+
+          scoreEl.classList.add(
+            "bump"
+          );
+        }
+
+        if (
+          score > bestScore
+        ) {
+          bestScore =
+            score;
+
+          bestEl.textContent =
+            bestScore.toLocaleString();
+
+          saveBest();
+        }
+      }
+
+      function flashScore(
+        points
+      ) {
+        if (!points) {
+          return;
+        }
+
+        const pop =
+          document.createElement(
+            "span"
+          );
+
+        pop.className =
+          "score-float";
+
+        pop.textContent =
+          `+${points.toLocaleString()}`;
+
+        scoreBoxEl.appendChild(
+          pop
+        );
+
+        window.setTimeout(
+          () => pop.remove(),
+          750
+        );
+      }
+
+      /* =========================================================
+         MOVEMENT
+         ========================================================= */
+
+      const VECTORS = {
+        up: {
+          dr: -1,
+          dc: 0
+        },
+
+        down: {
+          dr: 1,
+          dc: 0
+        },
+
+        left: {
+          dr: 0,
+          dc: -1
+        },
+
+        right: {
+          dr: 0,
+          dc: 1
+        }
+      };
+
+      /*
+        Returns tiles from the side closest to
+        the direction of movement.
+
+        This makes merge processing deterministic
+        and prevents several edge-case merge bugs.
+      */
+
+      function getLineTiles(
+        direction,
+        line
+      ) {
+        const vertical =
+          direction === "up" ||
+          direction === "down";
+
+        const result =
+          tiles.filter(tile => {
+            return vertical
+              ? tile.col === line
+              : tile.row === line;
+          });
+
+        const axis =
+          vertical
+            ? "row"
+            : "col";
+
+        result.sort(
+          (a, b) => {
+            if (
+              direction === "up" ||
+              direction === "left"
+            ) {
+              return (
+                a[axis] -
+                b[axis]
+              );
+            }
+
+            return (
+              b[axis] -
+              a[axis]
+            );
+          }
+        );
+
+        return result;
+      }
+
+      function destination(
+        direction,
+        line,
+        index
+      ) {
+        if (
+          direction === "up"
+        ) {
+          return {
+            row: index,
+            col: line
+          };
+        }
+
+        if (
+          direction === "down"
+        ) {
+          return {
+            row:
+              SIZE -
+              1 -
+              index,
+            col: line
+          };
+        }
+
+        if (
+          direction === "left"
+        ) {
+          return {
+            row: line,
+            col: index
+          };
+        }
+
+        return {
+          row: line,
+          col:
+            SIZE -
+            1 -
+            index
+        };
+      }
+
+      function move(
+        direction
+      ) {
+        if (
+          isAnimating ||
+          gameOver
+        ) {
+          return;
+        }
+
+        const vector =
+          VECTORS[
+            direction
+          ];
+
+        if (!vector) {
+          return;
+        }
+
+        /*
+          Snapshot MUST happen here,
+          before anything changes.
+        */
+
+        const before =
+          snapshot();
+
+        const losers =
+          new Set();
+
+        const winners =
+          new Map();
+
+        /*
+          Logical values are separate from tile.value
+          because the DOM should keep showing the
+          old value during the slide phase.
+        */
+
+        const logicalValues =
+          new Map(
+            tiles.map(
+              tile => [
+                tile.id,
+                tile.value
+              ]
+            )
+          );
+
+        let moved = false;
+        let gainedPoints = 0;
+
+        /*
+          Process each row/column independently.
+        */
+
+        for (
+          let line = 0;
+          line < SIZE;
+          line++
+        ) {
+          const lineTiles =
+            getLineTiles(
+              direction,
+              line
+            );
+
+          let writeIndex = 0;
+
+          let lastTile = null;
+          let lastMerged = false;
+
+          for (
+            const tile
+            of lineTiles
+          ) {
+            const value =
+              logicalValues.get(
+                tile.id
+              );
+
+            /*
+              First tile in the line.
+            */
+
+            if (!lastTile) {
+              const dest =
+                destination(
+                  direction,
+                  line,
+                  writeIndex++
+                );
+
+              if (
+                tile.row !==
+                  dest.row ||
+                tile.col !==
+                  dest.col
+              ) {
+                moved = true;
+              }
+
+              tile.row =
+                dest.row;
+
+              tile.col =
+                dest.col;
+
+              lastTile =
+                tile;
+
+              lastMerged =
+                false;
+
+              continue;
+            }
+
+            const lastValue =
+              logicalValues.get(
+                lastTile.id
+              );
+
+            /*
+              Merge into previous tile.
+            */
+
+            if (
+              !lastMerged &&
+              lastValue === value
+            ) {
+              const dest = {
+                row:
+                  lastTile.row,
+
+                col:
+                  lastTile.col
+              };
+
+              moved = true;
+
+              losers.add(
+                tile.id
+              );
+
+              const newValue =
+                value * 2;
+
+              logicalValues.set(
+                lastTile.id,
+                newValue
+              );
+
+              winners.set(
+                lastTile.id,
+                newValue
+              );
+
+              gainedPoints +=
+                newValue;
+
+              /*
+                The consumed tile travels
+                into the same location as
+                its merge partner before it
+                gets removed.
+              */
+
+              tile.row =
+                dest.row;
+
+              tile.col =
+                dest.col;
+
+              /*
+                Prevent a just-created merge
+                from merging a second time
+                during the same move.
+              */
+
+              lastMerged = true;
+            } else {
+              /*
+                Normal movement.
+              */
+
+              const dest =
+                destination(
+                  direction,
+                  line,
+                  writeIndex++
+                );
+
+              if (
+                tile.row !==
+                  dest.row ||
+                tile.col !==
+                  dest.col
+              ) {
+                moved = true;
+              }
+
+              tile.row =
+                dest.row;
+
+              tile.col =
+                dest.col;
+
+              lastTile =
+                tile;
+
+              lastMerged =
+                false;
+            }
+          }
+        }
+
+        /*
+          No board change:
+          do absolutely nothing.
+        */
+
+        if (!moved) {
+          return;
+        }
+
+        /*
+          This is now the true Undo point.
+        */
+
+        previousState =
+          before;
+
+        undoBtn.disabled =
+          false;
+
+        isAnimating =
+          true;
+
+        /*
+          PHASE 1:
+          tiles slide to their new locations.
+        */
+
+        renderTiles();
+
+        /*
+          PHASE 2:
+          remove merged tiles, update winner values,
+          add the random tile, then evaluate the game.
+        */
+
+        window.setTimeout(
+          () => {
+            applyMerges(
+              losers,
+              winners,
+              gainedPoints
+            );
+
+            /*
+              Existing tiles are no longer "new".
+            */
+
+            for (
+              const tile
+              of tiles
+            ) {
+              tile.isNew =
+                false;
+            }
+
+            /*
+              Add one new tile
+              after every valid move.
+            */
+
+            const newTile =
+              addRandomTile();
+
+            renderTiles();
+
+            if (newTile) {
+              const newEl =
+                tileEls.get(
+                  newTile.id
+                );
+
+              if (
+                !reducedMotion &&
+                newEl
+              ) {
+                window.setTimeout(
+                  () => {
+                    newEl.classList.remove(
+                      "tile-new"
+                    );
+                  },
+                  220
+                );
+              } else if (
+                newEl
+              ) {
+                newEl.classList.remove(
+                  "tile-new"
+                );
+              }
+
+              newTile.isNew =
+                false;
+            }
+
+            checkGameState();
+
+            isAnimating =
+              false;
+          },
+          reducedMotion
+            ? 0
+            : SLIDE_MS
+        );
+      }
+
+      /* =========================================================
+         MERGE APPLICATION
+         ========================================================= */
+
+      function applyMerges(
+        losers,
+        winners,
+        gainedPoints
+      ) {
+        /*
+          Remove consumed tiles.
+        */
+
+        tiles =
+          tiles.filter(
+            tile =>
+              !losers.has(
+                tile.id
+              )
+          );
+
+        /*
+          Update winner values.
+        */
+
+        for (
+          const [
+            id,
+            newValue
+          ]
+          of winners
+        ) {
+          const tile =
+            tileById(id);
+
+          if (!tile) {
+            continue;
+          }
+
+          tile.value =
+            newValue;
+
+          const el =
+            tileEls.get(id);
+
+          if (!el) {
+            continue;
+          }
+
+          el.dataset.value =
+            String(newValue);
+
+          el.className =
+            `tile tile-${Math.min(
+              newValue,
+              8192
+            )}`;
+
+          const inner =
+            el.firstElementChild;
+
+          if (inner) {
+            inner.textContent =
+              newValue;
+          }
+
+          /*
+            Animate merged tile.
+          */
+
+          if (!reducedMotion) {
+            void el.offsetWidth;
+
+            el.classList.add(
+              "tile-merged"
+            );
+
+            window.setTimeout(
+              () => {
+                el.classList.remove(
+                  "tile-merged"
+                );
+              },
+              260
+            );
+          }
+
+          /*
+            2048 win detection.
+            >= 2048 also handles games
+            that somehow create higher values.
+          */
+
+          if (
+            newValue >= 2048 &&
+            !won
+          ) {
+            won = true;
+          }
+        }
+
+        /*
+          Add score from merges.
+        */
+
+        if (
+          gainedPoints > 0
+        ) {
+          setScore(
+            score +
+              gainedPoints
+          );
+
+          flashScore(
+            gainedPoints
+          );
+        }
+      }
+
+      /* =========================================================
+         GAME STATE
+         ========================================================= */
+
+      function canMove() {
+        /*
+          Empty spaces mean there is
+          definitely another move possible.
+        */
+
+        if (
+          tiles.length <
+          SIZE * SIZE
+        ) {
+          return true;
+        }
+
+        for (
+          let row = 0;
+          row < SIZE;
+          row++
+        ) {
+          for (
+            let col = 0;
+            col < SIZE;
+            col++
+          ) {
+            const tile =
+              tileAt(
+                row,
+                col
+              );
+
+            if (!tile) {
+              return true;
+            }
+
+            const right =
+              col <
+              SIZE - 1
+                ? tileAt(
+                    row,
+                    col + 1
+                  )
+                : null;
+
+            const down =
+              row <
+              SIZE - 1
+                ? tileAt(
+                    row + 1,
+                    col
+                  )
+                : null;
+
+            if (
+              right &&
+              right.value ===
+                tile.value
+            ) {
+              return true;
+            }
+
+            if (
+              down &&
+              down.value ===
+                tile.value
+            ) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      }
+
+      function checkGameState() {
+        /*
+          Win has priority over Game Over.
+        */
+
+        if (
+          won &&
+          !keepPlaying
+        ) {
+          gameOver = false;
+
+          showMessage(
+            "🎉 You Win!",
+            "New Game",
+            true
+          );
+
+          return;
+        }
+
+        if (!canMove()) {
+          gameOver = true;
+
+          showMessage(
+            "Game Over!",
+            "Try Again",
+            false
+          );
+        }
+      }
+
+      function showMessage(
+        text,
+        primaryLabel,
+        isWin
+      ) {
+        messageText.textContent =
+          text;
+
+        messageBtn.textContent =
+          primaryLabel;
+
+        continueBtn.hidden =
+          !isWin;
+
+        messageEl.classList.add(
+          "active"
+        );
+      }
+
+      function hideMessage() {
+        messageEl.classList.remove(
+          "active"
+        );
+
+        continueBtn.hidden =
+          true;
+      }
+
+      /* =========================================================
+         GAME INITIALIZATION
+         ========================================================= */
+
+      function clearBoardDom() {
+        tilesLayer.replaceChildren();
+        tileEls.clear();
+      }
+
+      function initGame() {
+        clearBoardDom();
+
+        tiles = [];
+
+        nextId = 1;
+
+        score = 0;
+
+        gameOver = false;
+        won = false;
+        keepPlaying = false;
+
+        previousState = null;
+
+        isAnimating = false;
+
+        scoreEl.textContent =
+          "0";
+
+        bestEl.textContent =
+          bestScore.toLocaleString();
+
+        undoBtn.disabled =
+          true;
+
+        hideMessage();
+
+        /*
+          Initial two tiles.
+        */
+
+        addRandomTile();
+        addRandomTile();
+
+        renderTiles();
+
+        /*
+          Remove "new tile" state
+          after the opening animation.
+        */
+
+        window.setTimeout(
+          () => {
+            for (
+              const tile
+              of tiles
+            ) {
+              tile.isNew =
+                false;
+
+              const el =
+                tileEls.get(
+                  tile.id
+                );
+
+              if (el) {
+                el.classList.remove(
+                  "tile-new"
+                );
+              }
+            }
+          },
+          220
+        );
+      }
+
+      /* =========================================================
+         UNDO
+         ========================================================= */
+
+      function undo() {
+        if (
+          !previousState ||
+          isAnimating
+        ) {
+          return;
+        }
+
+        const state =
+          previousState;
+
+        previousState =
+          null;
+
+        clearBoardDom();
+
+        tiles =
+          state.tiles.map(
+            tile => ({
+              ...tile,
+              isNew: false
+            })
+          );
+
+        nextId =
+          state.nextId;
+
+        score =
+          state.score;
+
+        gameOver =
+          state.gameOver;
+
+        won =
+          state.won;
+
+        keepPlaying =
+          state.keepPlaying;
+
+        scoreEl.textContent =
+          score.toLocaleString();
+
+        undoBtn.disabled =
+          true;
+
+        hideMessage();
+
+        renderTiles();
+      }
+
+      /* =========================================================
+         KEYBOARD
+         ========================================================= */
+
+      const KEY_MAP = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+
+        w: "up",
+        W: "up",
+
+        s: "down",
+        S: "down",
+
+        a: "left",
+        A: "left",
+
+        d: "right",
+        D: "right",
+
+        k: "up",
+        j: "down",
+        h: "left",
+        l: "right"
+      };
+
+      document.addEventListener(
+        "keydown",
+        event => {
+          const direction =
+            KEY_MAP[
+              event.key
+            ];
+
+          if (!direction) {
+            return;
+          }
+
+          const active =
+            document.activeElement;
+
+          /*
+            Don't hijack typing fields.
+          */
+
+          if (
+            active &&
+            [
+              "INPUT",
+              "TEXTAREA",
+              "SELECT"
+            ].includes(
+              active.tagName
+            )
+          ) {
+            return;
+          }
+
+          event.preventDefault();
+
+          move(direction);
+        }
+      );
+
+      /* =========================================================
+         TOUCH
+         ========================================================= */
+
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchStartTime = 0;
+
+      boardEl.addEventListener(
+        "touchstart",
+        event => {
+          if (
+            event.touches.length !==
+            1
+          ) {
+            return;
+          }
+
+          touchStartX =
+            event.touches[0]
+              .clientX;
+
+          touchStartY =
+            event.touches[0]
+              .clientY;
+
+          touchStartTime =
+            performance.now();
+        },
+        {
+          passive: true
+        }
+      );
+
+      boardEl.addEventListener(
+        "touchmove",
+        event => {
+          if (
+            event.cancelable
+          ) {
+            event.preventDefault();
+          }
+        },
+        {
+          passive: false
+        }
+      );
+
+      boardEl.addEventListener(
+        "touchend",
+        event => {
+          if (
+            !event.changedTouches.length
+          ) {
+            return;
+          }
+
+          const touch =
+            event.changedTouches[0];
+
+          const dx =
+            touch.clientX -
+            touchStartX;
+
+          const dy =
+            touch.clientY -
+            touchStartY;
+
+          const dt =
+            performance.now() -
+            touchStartTime;
+
+          const absX =
+            Math.abs(dx);
+
+          const absY =
+            Math.abs(dy);
+
+          /*
+            Ignore slow gestures and taps.
+          */
+
+          if (
+            dt > 800
+          ) {
+            return;
+          }
+
+          if (
+            absX < 24 &&
+            absY < 24
+          ) {
+            return;
+          }
+
+          if (
+            absX > absY
+          ) {
+            move(
+              dx > 0
+                ? "right"
+                : "left"
+            );
+          } else {
+            move(
+              dy > 0
+                ? "down"
+                : "up"
+            );
+          }
+        },
+        {
+          passive: true
+        }
+      );
+
+      /* =========================================================
+         MOUSE DRAG
+         ========================================================= */
+
+      let dragging = false;
+
+      let dragStartX = 0;
+      let dragStartY = 0;
+
+      boardEl.addEventListener(
+        "mousedown",
+        event => {
+          if (
+            event.button !== 0
+          ) {
+            return;
+          }
+
+          dragging = true;
+
+          dragStartX =
+            event.clientX;
+
+          dragStartY =
+            event.clientY;
+        }
+      );
+
+      window.addEventListener(
+        "mousemove",
+        event => {
+          if (!dragging) {
+            return;
+          }
+
+          const dx =
+            event.clientX -
+            dragStartX;
+
+          const dy =
+            event.clientY -
+            dragStartY;
+
+          const absX =
+            Math.abs(dx);
+
+          const absY =
+            Math.abs(dy);
+
+          const threshold = 30;
+
+          if (
+            absX < threshold &&
+            absY < threshold
+          ) {
+            return;
+          }
+
+          dragging = false;
+
+          if (
+            absX > absY
+          ) {
+            move(
+              dx > 0
+                ? "right"
+                : "left"
+            );
+          } else {
+            move(
+              dy > 0
+                ? "down"
+                : "up"
+            );
+          }
+        }
+      );
+
+      window.addEventListener(
+        "mouseup",
+        () => {
+          dragging = false;
+        }
+      );
+
+      /* =========================================================
+         OVERLAY INPUT PROTECTION
+         ========================================================= */
+
+      /*
+        Without this, interacting with overlay buttons
+        can bubble into the board's swipe/drag handlers.
+      */
+
+      [
+        "touchstart",
+        "touchmove",
+        "touchend",
+        "mousedown"
+      ].forEach(type => {
+        messageEl.addEventListener(
+          type,
+          event => {
+            event.stopPropagation();
+          }
+        );
+      });
+
+      /* =========================================================
+         BUTTONS
+         ========================================================= */
+
+      newGameBtn.addEventListener(
+        "click",
+        initGame
+      );
+
+      undoBtn.addEventListener(
+        "click",
+        undo
+      );
+
+      /*
+        On both Game Over and Win,
+        the main button starts a new game.
+      */
+
+      messageBtn.addEventListener(
+        "click",
+        initGame
+      );
+
+      /*
+        Win screen only:
+        continue the current game.
+      */
+
+      continueBtn.addEventListener(
+        "click",
+        () => {
+          keepPlaying = true;
+
+          hideMessage();
+        }
+      );
+
+      /* =========================================================
+         THEME
+         ========================================================= */
+
+      themeBtn.addEventListener(
+        "click",
+        () => {
+          const isDark =
+            !document.body.classList.contains(
+              "dark"
+            );
+
+          applyTheme(isDark);
+
+          saveTheme(isDark);
+        }
+      );
+
+      /* =========================================================
+         CUSTOM CURSOR
+         ========================================================= */
+
+      const finePointer =
+        window.matchMedia(
+          "(min-width: 900px) and (hover: hover) and (pointer: fine)"
+        );
+
+      if (
+        finePointer.matches &&
+        cursorDot &&
+        cursorRing
+      ) {
+        let mx =
+          window.innerWidth / 2;
+
+        let my =
+          window.innerHeight / 2;
+
+        let rx = mx;
+        let ry = my;
+
+        let cursorVisible =
+          false;
+
+        const loop = () => {
+          rx +=
+            (mx - rx) *
+            0.18;
+
+          ry +=
+            (my - ry) *
+            0.18;
+
+          cursorDot.style.left =
+            `${mx}px`;
+
+          cursorDot.style.top =
+            `${my}px`;
+
+          cursorRing.style.left =
+            `${rx}px`;
+
+          cursorRing.style.top =
+            `${ry}px`;
+
+          requestAnimationFrame(
+            loop
+          );
+        };
+
+        loop();
+
+        window.addEventListener(
+          "mousemove",
+          event => {
+            mx =
+              event.clientX;
+
+            my =
+              event.clientY;
+
+            if (
+              !cursorVisible
+            ) {
+              cursorVisible =
+                true;
+
+              rx = mx;
+              ry = my;
+            }
+          },
+          {
+            passive: true
+          }
+        );
+
+        document.addEventListener(
+          "mouseleave",
+          () => {
+            cursorDot.style.opacity =
+              "0";
+
+            cursorRing.style.opacity =
+              "0";
+          }
+        );
+
+        document.addEventListener(
+          "mouseenter",
+          () => {
+            cursorDot.style.opacity =
+              "1";
+
+            cursorRing.style.opacity =
+              "0.55";
+          }
+        );
+
+        document
+          .querySelectorAll(
+            ".interactive, button, a"
+          )
+          .forEach(
+            element => {
+              element.addEventListener(
+                "mouseenter",
+                () => {
+                  document.body.classList.add(
+                    "cursor-hover"
+                  );
+                }
+              );
+
+              element.addEventListener(
+                "mouseleave",
+                () => {
+                  document.body.classList.remove(
+                    "cursor-hover"
+                  );
+                }
+              );
+            }
+          );
+      }
+
+      /* =========================================================
+         RESPONSIVE GEOMETRY
+         ========================================================= */
+
+      const handleResize =
+        () => {
+          syncTileGeometry();
+        };
+
+      window.addEventListener(
+        "resize",
+        handleResize,
+        {
+          passive: true
+        }
+      );
+
+      if (
+        "ResizeObserver" in
+        window
+      ) {
+        const observer =
+          new ResizeObserver(
+            handleResize
+          );
+
+        observer.observe(
+          boardEl
+        );
+      }
+
+      /* =========================================================
+         BOOT
+         ========================================================= */
+
+      loadBest();
+
+      loadTheme();
+
+      initGame();
+    })();
+  </script>
+
+</body>
+</html>
